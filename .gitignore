@@ -1,6 +1,11 @@
 .env
+.venv/
 node_modules/
 .DS_Store
 yolo/runs/
+yolo/.ultralytics/
+Ultralytics/
+__pycache__/
 yolo/dataset/images/
 yolo/dataset/labels/
+yolo/roboflow-export/

@@ -31,6 +31,12 @@ YOLO is integrated as the primary detector once you provide labeled data and tra
    python yolo\train.py --epochs 150 --imgsz 1280
    ```
 
+   For a Roboflow YOLO segmentation export, point directly to Roboflow's extracted `data.yaml`; the default `yolo26n-seg.pt` model preserves its wire polygons while still returning boxes to PoleSight:
+
+   ```powershell
+   .\.venv\Scripts\python.exe yolo\train.py --data .\yolo\roboflow-export\data.yaml --epochs 150 --imgsz 1280
+   ```
+
 4. Start the local inference service with the resulting weights:
 
    ```powershell

@@ -33,7 +33,7 @@ const categoryLabels = {
   pole: 'Pole', crossarm: 'Crossarm', insulator: 'Insulator', primary_conductor: 'Primary line',
   secondary_line: 'Secondary line', neutral_line: 'Neutral line', transformer: 'Transformer',
   cutout_fuse: 'Cutout / fuse', arrester: 'Arrester', switch: 'Switch', regulator: 'Regulator',
-  capacitor: 'Capacitor', guy_wire: 'Guy wire', streetlight: 'Streetlight', telecom: 'Telecom',
+  capacitor: 'Capacitor', guy_wire: 'Guy wire', streetlight: 'Streetlight', telecom: 'Telecom', wire: 'Wire',
   meter: 'Meter', hardware: 'Hardware', other: 'Other attachment'
 };
 

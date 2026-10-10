@@ -14,17 +14,23 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, UnidentifiedImageError
-from ultralytics import YOLO
-
-
 ROOT = Path(__file__).resolve().parent
+CONFIG_ROOT = ROOT / ".ultralytics"
+CONFIG_ROOT.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("YOLO_CONFIG_DIR", str(CONFIG_ROOT))
+MATPLOTLIB_ROOT = CONFIG_ROOT / "matplotlib"
+MATPLOTLIB_ROOT.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MATPLOTLIB_ROOT))
+
+from PIL import Image, UnidentifiedImageError
+from ultralytics import YOLO  # noqa: E402
 MAX_BODY_BYTES = 16 * 1024 * 1024
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 # Dataset labels can stay specific while the app preserves its existing visual color categories.
 CATEGORY_ALIASES = {
     "crossarm_brace": "hardware",
+    "wire": "wire",
     "secondary_conductor": "secondary_line",
     "neutral_conductor": "neutral_line",
     "service_drop": "secondary_line",
@@ -44,7 +50,7 @@ CATEGORY_ALIASES = {
 APP_CATEGORIES = {
     "pole", "crossarm", "insulator", "primary_conductor", "secondary_line", "neutral_line",
     "transformer", "cutout_fuse", "arrester", "switch", "regulator", "capacitor", "guy_wire",
-    "streetlight", "telecom", "meter", "hardware", "other",
+    "streetlight", "telecom", "meter", "hardware", "wire", "other",
 }
 
 
