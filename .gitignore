@@ -1,3 +1,6 @@
 .env
 node_modules/
 .DS_Store
+yolo/runs/
+yolo/dataset/images/
+yolo/dataset/labels/

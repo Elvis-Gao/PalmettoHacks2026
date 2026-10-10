@@ -1,0 +1,34 @@
+# A one-class-per-physical-component taxonomy for PoleSight.
+# All paths are relative to this file's folder.
+path: dataset
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: pole
+  1: crossarm
+  2: crossarm_brace
+  3: insulator
+  4: primary_conductor
+  5: secondary_conductor
+  6: neutral_conductor
+  7: service_drop
+  8: telecom_cable
+  9: telecom_attachment
+  10: transformer
+  11: cutout_fuse
+  12: surge_arrester
+  13: switch
+  14: capacitor_bank
+  15: voltage_regulator
+  16: streetlight
+  17: luminaire_arm
+  18: guy_wire
+  19: guy_guard
+  20: guy_anchor
+  21: meter
+  22: conduit_riser
+  23: ground_wire
+  24: deadend_hardware
+  25: clamp_hardware

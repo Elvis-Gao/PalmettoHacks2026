@@ -7,6 +7,10 @@ await loadEnvFile();
 
 const PORT = Number(process.env.PORT || 3000);
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const DETECTOR_MODE = (process.env.DETECTOR_MODE || 'auto').toLowerCase();
+const YOLO_URL = process.env.YOLO_URL?.replace(/\/+$/, '');
+const YOLO_CONFIDENCE = clampNumber(process.env.YOLO_CONFIDENCE, 0.1, 0.95, 0.25);
+const YOLO_IOU = clampNumber(process.env.YOLO_IOU, 0.1, 0.95, 0.45);
 const PUBLIC_DIRECTORY = join(process.cwd(), 'public');
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
 
@@ -75,17 +79,11 @@ createServer(async (request, response) => {
   }
 }).listen(PORT, () => {
   console.log(`PoleSight is ready at http://localhost:${PORT}`);
-  console.log(`Gemini model: ${MODEL}`);
+  console.log(`Detector mode: ${DETECTOR_MODE}${YOLO_URL ? ` / YOLO: ${YOLO_URL}` : ''}`);
+  console.log(`Gemini fallback model: ${MODEL}`);
 });
 
 async function analyzeImage(request, response) {
-  if (!process.env.GEMINI_API_KEY) {
-    respondJson(response, 503, {
-      error: 'Gemini is not configured. Add GEMINI_API_KEY to a local .env file, then restart the server.'
-    });
-    return;
-  }
-
   const body = await readJsonBody(request);
   const { imageBase64, mimeType } = body || {};
 
@@ -99,6 +97,62 @@ async function analyzeImage(request, response) {
     return;
   }
 
+  if (DETECTOR_MODE !== 'gemini' && YOLO_URL) {
+    try {
+      const analysis = await analyzeWithYolo(imageBase64, mimeType);
+      respondJson(response, 200, { analysis, provider: 'yolo' });
+      return;
+    } catch (error) {
+      console.warn('YOLO detection unavailable:', error.message);
+      if (DETECTOR_MODE === 'yolo') {
+        respondJson(response, 503, { error: `YOLO detector is unavailable: ${error.message}` });
+        return;
+      }
+    }
+  }
+
+  if (DETECTOR_MODE === 'yolo') {
+    respondJson(response, 503, {
+      error: 'YOLO mode is selected but YOLO_URL is not configured. Start the local YOLO service and set YOLO_URL in .env.'
+    });
+    return;
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    respondJson(response, 503, {
+      error: 'No detector is ready. Configure YOLO_URL for your trained YOLO model, or add GEMINI_API_KEY for the Gemini fallback.'
+    });
+    return;
+  }
+
+  await analyzeWithGemini(imageBase64, mimeType, response);
+}
+
+async function analyzeWithYolo(imageBase64, mimeType) {
+  const yoloResponse = await fetch(`${YOLO_URL}/detect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({
+      imageBase64,
+      mimeType,
+      confidence: YOLO_CONFIDENCE,
+      iou: YOLO_IOU
+    })
+  });
+  const payload = await yoloResponse.json().catch(() => ({}));
+  if (!yoloResponse.ok) throw new Error(payload.error || `YOLO service returned ${yoloResponse.status}.`);
+
+  const detections = Array.isArray(payload.detections) ? payload.detections : [];
+  return normalizeAnalysis({
+    summary: payload.summary || `Custom YOLO model found ${detections.length} visible components.`,
+    overall_condition: 'not_assessable',
+    safety_notes: ['YOLO detections identify visible components only; field verification is required.'],
+    detections: detections.map((detection) => ({ ...detection, source: 'yolo' }))
+  });
+}
+
+async function analyzeWithGemini(imageBase64, mimeType, response) {
   const apiResponse = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`,
     {
@@ -145,7 +199,7 @@ async function analyzeImage(request, response) {
     return;
   }
 
-  respondJson(response, 200, { analysis: normalizeAnalysis(analysis) });
+  respondJson(response, 200, { analysis: normalizeAnalysis(analysis), provider: 'gemini' });
 }
 
 function parseAnalysis(text) {
@@ -180,7 +234,7 @@ function normalizeDetection(detection, index, validConditions, validActions) {
   const category = String(detection.category || 'other');
   const box = normalizeBox(detection.bounding_box_1000);
   const requestedMode = detection.display_mode === 'marker' ? 'marker' : 'box';
-  const displayMode = requestedMode === 'marker' || shouldUseMarker(category, box) ? 'marker' : 'box';
+  const displayMode = requestedMode === 'marker' || (detection.source !== 'yolo' && shouldUseMarker(category, box)) ? 'marker' : 'box';
   const anchor = normalizePoint(detection.anchor_point_1000) || centerOf(box);
 
   return {
@@ -195,6 +249,11 @@ function normalizeDetection(detection, index, validConditions, validActions) {
     description: typeof detection.description === 'string' ? detection.description : 'Visible component.',
     action: validActions.has(detection.action) ? detection.action : 'review_photo'
   };
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
 }
 
 function shouldUseMarker(category, box) {

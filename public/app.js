@@ -118,7 +118,7 @@ async function analyzeImage() {
     if (!response.ok) throw new Error(data.error || 'The inspection could not be completed.');
     lastAnalysis = data.analysis;
     renderAnalysis(lastAnalysis);
-    setState('Analysis complete', 'complete');
+    setState(data.provider === 'yolo' ? 'YOLO detection complete' : 'Gemini analysis complete', 'complete');
   } catch (error) {
     console.error(error);
     setState('Analysis interrupted', 'error');
