@@ -85,10 +85,13 @@ footer { display: flex; justify-content: space-between; padding: 0 0 30px; color
   min-height: 20px;
   padding: 3px 6px;
   color: #f9fff6;
+  border: 0;
   border-radius: 2px 2px 3px 2px;
   background: #397d2d;
   font: 500 9px/1.1 "DM Mono", monospace;
   box-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
 }
 .detection-box > .box-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-weight: 500; }
 .detection-box > .box-label em { color: #d9ff9d; font: inherit; font-style: normal; }
@@ -96,6 +99,17 @@ footer { display: flex; justify-content: space-between; padding: 0 0 30px; color
 .detection-box.category-telecom > .box-label, .detection-box.category-secondary_line > .box-label, .detection-box.category-neutral_line > .box-label { background: #3f6693; }
 .detection-box.category-cutout_fuse > .box-label, .detection-box.category-arrester > .box-label { background: #b84e3c; }
 .detection-box.is-active > .box-label { outline: 2px solid #eaffba; outline-offset: 2px; }
+.detection-box { pointer-events: none; }
+.detection-box > .box-label.is-compact { min-height: 16px; padding: 2px 4px; gap: 4px; }
+
+/* Long wires and other sprawling assets are precise clickable points, not blocking boxes. */
+.detection-marker { position: absolute; z-index: 3; width: 11px; height: 11px; border: 2px solid #f7fff3; border-radius: 50%; background: #397d2d; box-shadow: 0 0 0 2px rgba(34, 89, 34, .45); transform: translate(-50%, -50%); pointer-events: none; }
+.marker-label { position: absolute; top: -11px; left: 8px; display: flex; align-items: center; gap: 6px; width: max-content; max-width: 142px; min-height: 22px; padding: 4px 7px; color: #f9fff6; border: 0; border-radius: 4px; background: #397d2d; font: 500 9px/1.1 "DM Mono", monospace; white-space: nowrap; box-shadow: 0 2px 5px rgba(13, 57, 41, .2); cursor: pointer; pointer-events: auto; }
+.marker-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-weight: 500; }.marker-label em { color: #d9ff9d; font: inherit; font-style: normal; }
+.detection-marker.category-transformer, .detection-marker.category-streetlight { background: #bd7917; }.detection-marker.category-transformer .marker-label, .detection-marker.category-streetlight .marker-label { background: #bd7917; }
+.detection-marker.category-telecom, .detection-marker.category-secondary_line, .detection-marker.category-neutral_line { background: #3f6693; }.detection-marker.category-telecom .marker-label, .detection-marker.category-secondary_line .marker-label, .detection-marker.category-neutral_line .marker-label { background: #3f6693; }
+.detection-marker.category-cutout_fuse, .detection-marker.category-arrester { background: #b84e3c; }.detection-marker.category-cutout_fuse .marker-label, .detection-marker.category-arrester .marker-label { background: #b84e3c; }
+.detection-marker.is-active { z-index: 5; }.detection-marker.is-active .marker-label { outline: 2px solid #eaffba; outline-offset: 2px; }
 
 .component-details { margin-top: 14px; padding: 16px; border: 1px solid #cddfca; border-radius: 10px; background: #f7fcf3; }
 .details-heading { display: flex; justify-content: space-between; align-items: start; }.details-heading .section-kicker { margin: 0; }
