@@ -6,6 +6,7 @@ import argparse
 import base64
 import binascii
 import json
+import math
 import os
 import threading
 from http import HTTPStatus
@@ -58,12 +59,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a trained PoleSight YOLO detector locally.")
     parser.add_argument(
         "--weights",
-        default=os.environ.get("YOLO_WEIGHTS", str(ROOT / "runs" / "pole-components" / "weights" / "best.pt")),
+        default=os.environ.get("YOLO_WEIGHTS", str(ROOT / "runs" / "curated-v1" / "weights" / "best.pt")),
         help="Path to your trained best.pt file",
     )
     parser.add_argument("--host", default=os.environ.get("YOLO_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("YOLO_PORT", "8001")))
-    parser.add_argument("--imgsz", type=int, default=int(os.environ.get("YOLO_IMGSZ", "1280")))
+    parser.add_argument("--imgsz", type=int, default=int(os.environ.get("YOLO_IMGSZ", "640")))
     parser.add_argument("--max-det", type=int, default=int(os.environ.get("YOLO_MAX_DET", "300")))
     return parser.parse_args()
 
@@ -98,20 +99,23 @@ class Detector:
             normalized_boxes = boxes.xyxyn.cpu().tolist()
             confidences = boxes.conf.cpu().tolist()
             classes = boxes.cls.int().cpu().tolist()
+            normalized_masks = result.masks.xyn if result.masks is not None else []
             for index, (box, score, class_id) in enumerate(zip(normalized_boxes, confidences, classes), start=1):
                 class_name = str(result.names[int(class_id)])
                 category = CATEGORY_ALIASES.get(class_name, class_name if class_name in APP_CATEGORIES else "other")
                 x1, y1, x2, y2 = box
+                mask_points = mask_to_1000(normalized_masks[index - 1]) if index <= len(normalized_masks) else None
                 detections.append({
                     "id": f"yolo-{index}",
                     "label": class_name.replace("_", " ").title(),
                     "category": category,
                     "confidence": round(float(score), 4),
-                    "display_mode": "box",
+                    "display_mode": "outline" if mask_points else "box",
                     "bounding_box_1000": [
                         clamp_1000(y1 * 1000), clamp_1000(x1 * 1000),
                         clamp_1000(y2 * 1000), clamp_1000(x2 * 1000),
                     ],
+                    "mask_points_1000": mask_points,
                     "condition": "not_assessable",
                     "description": f"Custom YOLO detected a visible {class_name.replace('_', ' ')}.",
                     "action": "field_verify",
@@ -127,6 +131,27 @@ class Detector:
 
 def clamp_1000(value: float) -> int:
     return max(0, min(1000, round(value)))
+
+
+def mask_to_1000(points: Any, maximum_points: int = 180) -> list[list[int]] | None:
+    """Turn Ultralytics' normalized [x, y] polygon into a compact browser payload."""
+    try:
+        point_count = len(points)
+    except TypeError:
+        return None
+    if point_count < 3:
+        return None
+
+    stride = max(1, math.ceil(point_count / maximum_points))
+    compact_points: list[list[int]] = []
+    for point in points[::stride]:
+        try:
+            x, y = float(point[0]), float(point[1])
+        except (IndexError, TypeError, ValueError):
+            continue
+        if math.isfinite(x) and math.isfinite(y):
+            compact_points.append([clamp_1000(x * 1000), clamp_1000(y * 1000)])
+    return compact_points if len(compact_points) >= 3 else None
 
 
 def decode_image(payload: dict[str, Any]) -> Image.Image:

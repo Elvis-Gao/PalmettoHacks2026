@@ -131,13 +131,26 @@ async function analyzeImage() {
 function renderAnalysis(analysis) {
   const detections = analysis.detections || [];
   elements.detectionLayer.replaceChildren();
-  detections.forEach((detection, index) => renderBox(detection, index));
+  const outlineLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  outlineLayer.setAttribute('class', 'outline-layer');
+  outlineLayer.setAttribute('viewBox', '0 0 1000 1000');
+  outlineLayer.setAttribute('preserveAspectRatio', 'none');
+  elements.detectionLayer.append(outlineLayer);
+  detections.forEach((detection, index) => renderDetection(detection, index, outlineLayer));
   elements.detectionTotal.textContent = `${detections.length} visible item${detections.length === 1 ? '' : 's'} found`;
   closeDetails();
   if (!detections.length) showToast('No components could be confidently located. Try a sharper, closer photo.');
 }
 
-function renderBox(detection, index) {
+function renderDetection(detection, index, outlineLayer) {
+  if (detection.display_mode === 'outline' && detection.mask_points_1000) {
+    renderOutline(detection, outlineLayer);
+    return;
+  }
+  renderBox(detection, index);
+}
+
+function renderBox(detection) {
   if (detection.display_mode === 'marker' || !detection.bounding_box_1000) {
     renderMarker(detection);
     return;
@@ -154,6 +167,37 @@ function renderBox(detection, index) {
   label.addEventListener('click', () => showDetails(detection));
   box.append(label);
   elements.detectionLayer.append(box);
+  requestAnimationFrame(fitBoxLabels);
+}
+
+function renderOutline(detection, outlineLayer) {
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const commands = detection.mask_points_1000
+    .map(([x, y], index) => `${index ? 'L' : 'M'} ${x} ${y}`)
+    .join(' ');
+  path.setAttribute('d', `${commands} Z`);
+  path.setAttribute('tabindex', '0');
+  path.setAttribute('role', 'button');
+  path.setAttribute('aria-label', `${detection.label}, ${Math.round(detection.confidence * 100)} percent confidence. Open details.`);
+  path.classList.add('detection-outline-path', `category-${detection.category}`);
+  path.dataset.id = detection.id;
+  path.addEventListener('click', () => showDetails(detection));
+  path.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      showDetails(detection);
+    }
+  });
+  outlineLayer.append(path);
+
+  const [top, left] = detection.bounding_box_1000 || detection.anchor_point_1000 || [500, 500];
+  const label = createLabel(detection, `outline-label category-${detection.category}`);
+  label.style.top = `${top / 10}%`;
+  label.style.left = `${left / 10}%`;
+  label.dataset.id = detection.id;
+  if (detection.bounding_box_1000) label.dataset.box = detection.bounding_box_1000.join(',');
+  label.addEventListener('click', () => showDetails(detection));
+  elements.detectionLayer.append(label);
   requestAnimationFrame(fitBoxLabels);
 }
 
@@ -190,10 +234,22 @@ function fitBoxLabels() {
     label.style.maxWidth = `${maxWidth}px`;
     label.classList.toggle('is-compact', shortestSide < 38);
   });
+  document.querySelectorAll('.outline-label[data-box]').forEach((label) => {
+    const box = label.dataset.box.split(',').map(Number);
+    if (box.length !== 4) return;
+    const layer = elements.detectionLayer.getBoundingClientRect();
+    const width = Math.max(1, ((box[3] - box[1]) / 1000) * layer.width);
+    const height = Math.max(1, ((box[2] - box[0]) / 1000) * layer.height);
+    const shortestSide = Math.min(width, height);
+    const fontSize = Math.max(7, Math.min(11, Math.round(shortestSide / 9)));
+    label.style.fontSize = `${fontSize}px`;
+    label.style.maxWidth = `${Math.max(52, Math.min(155, Math.round(Math.max(width * 1.1, shortestSide * 2.5))))}px`;
+    label.classList.toggle('is-compact', shortestSide < 38);
+  });
 }
 
 function showDetails(detection) {
-  document.querySelectorAll('.detection-box, .detection-marker').forEach((item) => item.classList.toggle('is-active', item.dataset.id === detection.id));
+  document.querySelectorAll('.detection-box, .detection-marker, .detection-outline-path, .outline-label').forEach((item) => item.classList.toggle('is-active', item.dataset.id === detection.id));
   elements.detailTitle.textContent = detection.label;
   elements.detailConfidence.textContent = `${Math.round(detection.confidence * 100)}% confidence`;
   elements.detailCategory.textContent = categoryLabels[detection.category] || detection.category.replaceAll('_', ' ');
@@ -206,7 +262,7 @@ function showDetails(detection) {
 
 function closeDetails() {
   elements.componentDetails.hidden = true;
-  document.querySelectorAll('.detection-box, .detection-marker').forEach((item) => item.classList.remove('is-active'));
+  document.querySelectorAll('.detection-box, .detection-marker, .detection-outline-path, .outline-label').forEach((item) => item.classList.remove('is-active'));
 }
 
 function setLoading(isLoading) {

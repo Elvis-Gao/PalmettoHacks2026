@@ -23,24 +23,24 @@ YOLO is integrated as the primary detector once you provide labeled data and tra
    pip install -r yolo\requirements.txt
    ```
 
-2. Add permissioned, annotated photos under `yolo/dataset`. Follow [the annotation guide](yolo/dataset/README.md) exactly; the class taxonomy is in [dataset.yaml](yolo/dataset.yaml). Every individual wire and accessory must be annotated as its own object.
+2. The curated four-class training set is ready under `yolo/curated-pole-dataset`. It includes `pole`, `crossarm`, `transformer`, and `wire`; add specific labels for other accessories before expecting the model to identify them.
 
 3. Train a high-resolution detector for small assets and wires:
 
    ```powershell
-   python yolo\train.py --epochs 150 --imgsz 1280
+   .\.venv\Scripts\python.exe yolo\train.py
    ```
 
-   For a Roboflow YOLO segmentation export, point directly to Roboflow's extracted `data.yaml`; the default `yolo26n-seg.pt` model preserves its wire polygons while still returning boxes to PoleSight:
+   After the three-epoch smoke test succeeds, use a longer CPU run:
 
    ```powershell
-   .\.venv\Scripts\python.exe yolo\train.py --data .\yolo\roboflow-export\data.yaml --epochs 150 --imgsz 1280
+   .\.venv\Scripts\python.exe yolo\train.py --epochs 30 --patience 8 --name curated-v1
    ```
 
 4. Start the local inference service with the resulting weights:
 
    ```powershell
-   python yolo\service.py --weights yolo\runs\pole-components\weights\best.pt
+   .\.venv\Scripts\python.exe yolo\service.py
    ```
 
 5. Set `DETECTOR_MODE=yolo` and `YOLO_URL=http://127.0.0.1:8001` in `.env`, restart `node server.js`, and upload a photo. The status pill will say **YOLO detection complete** when your model supplied the boxes.

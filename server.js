@@ -233,8 +233,13 @@ function normalizeAnalysis(analysis) {
 function normalizeDetection(detection, index, validConditions, validActions) {
   const category = String(detection.category || 'other');
   const box = normalizeBox(detection.bounding_box_1000);
-  const requestedMode = detection.display_mode === 'marker' ? 'marker' : 'box';
-  const displayMode = requestedMode === 'marker' || (detection.source !== 'yolo' && shouldUseMarker(category, box)) ? 'marker' : 'box';
+  const mask = normalizeMask(detection.mask_points_1000);
+  const requestedMode = ['marker', 'outline'].includes(detection.display_mode) ? detection.display_mode : 'box';
+  const displayMode = requestedMode === 'outline' && mask
+    ? 'outline'
+    : requestedMode === 'marker' || (detection.source !== 'yolo' && shouldUseMarker(category, box))
+      ? 'marker'
+      : 'box';
   const anchor = normalizePoint(detection.anchor_point_1000) || centerOf(box);
 
   return {
@@ -244,6 +249,7 @@ function normalizeDetection(detection, index, validConditions, validActions) {
     confidence: Math.max(0, Math.min(1, Number(detection.confidence) || 0)),
     display_mode: displayMode,
     bounding_box_1000: box,
+    mask_points_1000: mask,
     anchor_point_1000: anchor,
     condition: validConditions.has(detection.condition) ? detection.condition : 'not_assessable',
     description: typeof detection.description === 'string' ? detection.description : 'Visible component.',
@@ -280,6 +286,15 @@ function normalizeBox(box) {
 function normalizePoint(point) {
   if (!Array.isArray(point) || point.length !== 2) return null;
   return point.map((value) => Math.max(0, Math.min(1000, Number(value) || 0)));
+}
+
+function normalizeMask(points) {
+  if (!Array.isArray(points) || points.length < 3) return null;
+  const normalized = points
+    .slice(0, 180)
+    .map(normalizePoint)
+    .filter(Boolean);
+  return normalized.length >= 3 ? normalized : null;
 }
 
 function centerOf(box) {
