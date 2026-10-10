@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071912" />
+    <title>PoleSight | Utility Pole Vision</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="mvp-shell">
+        <section class="workspace" aria-label="Pole image inspection">
+          <aside class="intake-panel">
+            <div class="panel-heading">
+              <div><p class="section-kicker">PoleSight</p><h1>Upload pole image</h1></div>
+            </div>
+            <p class="panel-intro">The photo will be labeled with visible equipment, wires, and attachments.</p>
+
+            <label class="dropzone" id="dropzone" for="image-input">
+              <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" />
+              <span class="upload-icon" aria-hidden="true">+</span>
+              <strong>Drop a pole photo here</strong>
+              <span>or click to browse</span>
+              <small>JPG, PNG, or WebP / max 10 MB</small>
+            </label>
+
+            <div class="file-details" id="file-details" hidden>
+              <div class="thumbnail-wrap"><img id="file-thumb" alt="Selected pole photo thumbnail" /></div>
+              <div><strong id="file-name"></strong><span id="file-size"></span></div>
+              <button class="icon-button" id="remove-image" type="button" aria-label="Remove selected image">&times;</button>
+            </div>
+
+            <button class="analyze-button" id="analyze-button" type="button" disabled>
+              <span>Analyze pole image</span><b aria-hidden="true">&rarr;</b>
+            </button>
+
+            <div class="privacy-note"><span aria-hidden="true">*</span><p>Your Gemini key stays on the server.</p></div>
+          </aside>
+
+          <section class="inspection-panel">
+            <div class="panel-heading panel-heading-wide">
+              <div><p class="section-kicker">Detection results</p><h2>Click a label for details</h2></div>
+              <div class="state-pill" id="analysis-state"><span></span> Waiting for image</div>
+            </div>
+
+            <div class="empty-state" id="empty-state">
+              <div class="empty-illustration" aria-hidden="true">
+                <span class="wire wire-one"></span><span class="wire wire-two"></span><span class="pole-shape"></span><span class="crossbar"></span><span class="insulator ins-one"></span><span class="insulator ins-two"></span>
+              </div>
+              <h3>Nothing on the line yet</h3>
+              <p>Add a clear field image and PoleSight will map the visible components here.</p>
+            </div>
+
+            <div class="result-view" id="result-view" hidden>
+              <div class="image-area">
+                <div class="image-wrapper" id="image-wrapper">
+                  <img id="preview-image" alt="Pole inspection image with detection overlays" />
+                  <div class="detection-layer" id="detection-layer" aria-label="Detected component bounding boxes"></div>
+                </div>
+              </div>
+              <div class="image-hint"><span>Labels show the detected item and visual confidence.</span><span id="detection-total"></span></div>
+              <section class="component-details" id="component-details" hidden aria-live="polite">
+                <div class="details-heading">
+                  <p class="section-kicker">Selected component</p>
+                  <button class="details-close" id="details-close" type="button" aria-label="Close component details">&times;</button>
+                </div>
+                <div class="details-title-row"><h3 id="detail-title"></h3><span id="detail-confidence"></span></div>
+                <dl class="details-meta">
+                  <div><dt>Type</dt><dd id="detail-category"></dd></div>
+                  <div><dt>Visual condition</dt><dd id="detail-condition"></dd></div>
+                  <div><dt>Next step</dt><dd id="detail-action"></dd></div>
+                </dl>
+                <p id="detail-description"></p>
+              </section>
+            </div>
+
+            <div class="loading-state" id="loading-state" hidden>
+              <div class="scan-art" aria-hidden="true"><span></span></div>
+              <h3>Reading the pole image</h3>
+              <p>Locating visible infrastructure and returning a structured field inventory.</p>
+            </div>
+          </section>
+        </section>
+
+        <p class="disclaimer">AI-assisted visual inventory only. Confirm equipment and safety conditions through an approved field inspection process.</p>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
